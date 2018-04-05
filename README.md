@@ -10,6 +10,8 @@ to monitor useful things.
   button stationed next to the pot can be used to inform our lab-mates that
   coffee is ready.
 
+    <img src="https://raw.githubusercontent.com/onolab-tmu/lab-concierge/master/photos/coffee_button.jpg" width="500" align="center">
+
 * **Doorman**: Our lab has only one set of keys that must be obtained from the
   guard at university (a unique security system). Our lab being at the 8th
   floor, if we forget to ask the key, but the lab is still closed, we might
@@ -20,6 +22,11 @@ to monitor useful things.
   that sense the status of the lock on the door. When the status changes,
   it informs the slack channel.
 
+    <img src="https://raw.githubusercontent.com/onolab-tmu/lab-concierge/master/photos/doorman.jpg" width="500" align="center">
+
+We have then a dedicated Slack channel where the information is shared.
+
+<img src="https://raw.githubusercontent.com/onolab-tmu/lab-concierge/master/photos/slack_screen_grab.png" width="500" align="center">
 
 ## Replicate it
 
@@ -81,3 +88,15 @@ the Slack incoming hook URL previously obtained.
         ampy put doorman/main.py
 
 3. Connect with the power supply and try it out!
+
+## License
+
+    /*
+     * ----------------------------------------------------------------------------
+     * "THE BEER-WARE LICENSE" (Revision 42):
+     * Robin Scheibler wrote this code.  As long as you retain this notice you
+     * can do whatever you want with this stuff. If we meet some day, and you think
+     * this stuff is worth it, you can buy me a beer in return.   Robin, Gilles, Elie
+     * ----------------------------------------------------------------------------
+     */
+
