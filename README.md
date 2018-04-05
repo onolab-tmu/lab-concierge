@@ -81,7 +81,6 @@ the Slack incoming hook URL previously obtained.
 
         ampy put coffee_button/config.json
         ampy put coffee_button/main.py
-  
   or
 
         ampy put doorman/config.json
