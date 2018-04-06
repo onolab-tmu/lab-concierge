@@ -19,10 +19,8 @@ with open('config.json', 'r') as f:
 hook_url = config['slack_hook_url']
 
 # We use a state machine to keep track of the door status
-DOOR_OPEN = 'Door is open'
-DOOR_CLOSED = 'Door is closed'
-door_states = [DOOR_OPEN, DOOR_CLOSED]
-current_door_state = DOOR_CLOSED
+DOOR_OPEN = 'The lab is open'
+DOOR_CLOSED = 'The lab is closed'
 
 # WIFI related stuff
 sta_if = network.WLAN(network.STA_IF)
@@ -41,18 +39,6 @@ def stop_backoff(t):
     else:
         print('Backoff expired and WIFI is not connected. Retrying.')
     wifi_backing_off = False
-
-# All messages
-msg_door = [
-        'The door is now open.',
-        'The door is now closed.'
-        ]
-
-# This is where we connected the button
-door_switch = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
-led = machine.Pin(2, machine.Pin.OUT)
-
-led.value(1)
 
 def concierge_to_slack(message, hook_url):
     '''
@@ -82,7 +68,54 @@ def blink(led_pin, n_times, on_time=500, off_time=500, on_value=True):
         led_pin.value(off_value)
         time.sleep_ms(off_time)
 
+def send_message_wrapper(msg):
+
+    # can't do anything without network
+    if not sta_if.isconnected():
+        return
+
+    # alert on slack
+    ret = concierge_to_slack(msg, hook_url)
+
+    # blink and simple debounce
+    blink(led, 1, on_time=200, off_time=100)
+
+    # blink twice more if it fails
+    if not ret:
+        blink(led, 2, on_time=200, off_time=100)
+
+door_status = 0
+def door_action_callback(x):
+    global door_status
+    new_status = x()
+
+    if new_status != door_status:
+        if new_status == 0:
+            send_message_wrapper(DOOR_OPEN)
+        else:
+            send_message_wrapper(DOOR_CLOSED)
+        door_status = new_status
+
+
 if __name__ == '__main__':
+
+    ########
+    # INIT #
+
+    # This is where we connected the button
+    door_switch = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
+    #door_switch.irq(handler=door_open_callback, trigger=machine.Pin.IRQ_FALLING)
+    # It seems that due to a bug, the interrupt is triggered on both rising and falling
+    # That is convenient for now.
+    door_switch.irq(handler=door_action_callback, trigger=machine.Pin.IRQ_RISING)
+    door_status = door_switch()
+
+    # The LED indicates connectivity
+    led = machine.Pin(2, machine.Pin.OUT)
+    led.value(1)
+
+    ########
+    # LOOP #
 
     while True:
         
@@ -94,25 +127,6 @@ if __name__ == '__main__':
 
             # turn off LED when connected
             led.value(0)
-
-            # Normal operations when connected
-            switch_state = door_switch.value()
-            new_door_state = door_states[switch_state]
-
-            if new_door_state != current_door_state:
-
-                # update door status
-                current_door_state = new_door_state
-
-                # alert on slack
-                ret = concierge_to_slack(msg_door[switch_state], hook_url)
-
-                # blink and simple debounce
-                blink(led, 1, on_time=200, off_time=100)
-
-                # blink twice more if it fails
-                if not ret:
-                    blink(led, 2, on_time=200, off_time=100)
 
         elif not wifi_backing_off:
 
