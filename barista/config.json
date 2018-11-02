@@ -1,0 +1,15 @@
+{
+  "wifi" : {
+    "SSID" : "my-ssid",
+    "pass" : "super-password"
+  },
+  "slack" : {
+    "token" : "<the_slack_token>",
+    "bot_token" : "<the_slack_bot_token>",
+    "webhook" : "https://hooks.slack.com/services/<long_hex_number>"
+  },
+  "button" : {
+    "channel" : "<slack_channel_id>",
+    "message" : "Coffee is ready! :confetti_ball:"
+  }
+}
