@@ -23,7 +23,7 @@ import re
 
 from uslackclient import SlackClient
 
-from wifi_connect import do_connect
+from wifi_connect import WifiState, WifiConnection
 from sensors import read_sensors
 from button import button_action
 
@@ -31,12 +31,13 @@ from button import button_action
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-do_connect(config['wifi']['SSID'], config['wifi']['pass'])
+wifi_connection = WifiConnection(config['wifi']['SSID'], config['wifi']['pass'])
 
 # instantiate Slack client
 slack_client = None
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
+dm_channels_list = None
 
 # constants
 RTM_READ_DELAY = 2 # 1 second delay between reading from RTM
@@ -65,6 +66,19 @@ COMMANDS = {
             }
         }
 
+def get_direct_message_channels(sc):
+    '''
+    Retrieves the list of direct message channels
+    '''
+    ret = sc.api_call('im.list')
+
+    ch_list = {}
+    for ch_info in ret['ims']:
+        ch_list[ch_info['id']] = ch_info['user']
+
+    return ch_list
+
+
 def parse_bot_commands(slack_events):
     """
         Parses a list of events coming from the Slack RTM API to find bot commands.
@@ -72,10 +86,15 @@ def parse_bot_commands(slack_events):
         If its not found, then this function returns None, None.
     """
     for event in slack_events:
+        print(event)
         if "type" in event and event["type"] == "message" and not "subtype" in event:
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
                 return message, event["channel"]
+            elif event['channel'] in dm_channels_list:
+                # no need for mention in direct message
+                return event['text'].strip(), event['channel']
+
     return None, None
 
 
@@ -104,25 +123,39 @@ def handle_command(command, channel):
             response = params['action']()
 
     # Sends the response back to the channel
-    slack_client.rtm_send_message(channel, response)
+    slack_client.rtm_send_message(channel, response, )
 
 if __name__ == '__main__':
 
     slack_client = SlackClient(config['slack']['bot_token'])
 
-    if slack_client.rtm_connect(with_team_state=False):
-        print("Starter Bot connected and running!")
+    while True:
 
-        # Read bot's user ID by calling Web API method `auth.test`
-        starterbot_id = slack_client.server.login_data['self']['id']
+        # make sure the wifi stays alive
+        wifi_connection.keep_alive()
+        if not wifi_connection.connected():
+            continue
 
-        while True:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
-            if command:
-                handle_command(command, channel)
+        if dm_channels_list is None:
+            dm_channels_list = get_direct_message_channels(slack_client)
 
-            button_action(slack_client.rtm_send_message, config['button']['channel'], config['button']['message'])
-            time.sleep(RTM_READ_DELAY)
-    else:
-        print("Connection failed. Exception traceback printed above.")
+
+        # now try to connect to Slack API
+        if slack_client.rtm_connect(with_team_state=False):
+            print("Starter Bot connected and running!")
+
+            # Read bot's user ID by calling Web API method `auth.test`
+            starterbot_id = slack_client.server.login_data['self']['id']
+
+            print('This is the bot ID', starterbot_id)
+
+            while slack_client.server.connected is True:
+                command, channel = parse_bot_commands(slack_client.rtm_read())
+                if command:
+                    handle_command(command, channel)
+
+                button_action(slack_client.rtm_send_message, config['button']['channel'], config['button']['message'])
+                time.sleep(RTM_READ_DELAY)
+        else:
+            print("Connection failed. Exception traceback printed above.")
 
