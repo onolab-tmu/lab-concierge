@@ -39,7 +39,7 @@ to monitor useful things.
     that sense the status of the lock on the door. When the status changes,
     it informs the slack channel.
 
-      <img src="https://raw.githubusercontent.com/onolab-tmu/lab-concierge/master/photos/doorman.jpg" width="500" align="center">
+    <img src="https://raw.githubusercontent.com/onolab-tmu/lab-concierge/master/photos/doorman.jpg" width="500" align="center">
     
 We have then a dedicated Slack channel where the information is shared.
 
