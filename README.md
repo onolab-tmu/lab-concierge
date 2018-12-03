@@ -36,7 +36,7 @@ to monitor useful things.
     student come and borrows the key while we are going back down to obtain it.
 
     This problem is solved by a [reed switch](https://en.wikipedia.org/wiki/Reed_switch)
-    that sense the status of the lock on the door. When the status changes,
+    that senses the status of the lock on the door. When the status changes,
     it informs the slack channel.
 
     <img src="https://raw.githubusercontent.com/onolab-tmu/lab-concierge/master/photos/doorman.jpg" width="500" align="center">
@@ -131,13 +131,13 @@ For the barista, the configuration is a little bit more advanced
 
         ampy put coffee_button/config.json
         ampy put coffee_button/main.py
-  or
+    or
 
         ampy put doorman/config.json
         ampy put doorman/main.py
-  
-  or
-  
+    
+    or
+    
         make barista
         ampy put barista/config.json
 
