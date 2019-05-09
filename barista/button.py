@@ -1,32 +1,40 @@
-'''
+"""
 This file will configure the red button and provide
 some callback routines
-'''
-import machine
-import time
+"""
+from machine import Pin, Timer
 
-# initialize the red button
-button_trig_time = None
-send_coffee_message = False
+class DebouncedButton(object):
 
-def button_callback(p):
-    '''
-    This is the callback called when the button is pressed
-    '''
-    global send_coffee_message, button_trig_time
-    now = time.ticks_ms()
-    if button_trig_time is None or (now - button_trig_time > 100):
-        send_coffee_message = True
-        button_trig_time = now
+    backing_off = False
+    do_action = False
 
-def button_action(callback, *args, **kwargs):
-    '''
-    This will call the user provided callback function when the button has been pressed
-    '''
-    global send_coffee_message
-    if send_coffee_message:
-        callback(*args, **kwargs)
-        send_coffee_message = False
+    def __init__(self, pin_num, backoff_time_ms=1000, timer_id=-1):
+        self.pin = Pin(pin_num, Pin.IN, Pin.PULL_UP)
+        self.pin.irq(trigger=Pin.IRQ_FALLING, handler=self.button_callback)
+        self.backoff_time_ms = backoff_time_ms
+        self.timer = Timer(timer_id)
 
-button_coffee_ready = machine.Pin(22, machine.Pin.IN, machine.Pin.PULL_UP)
-button_coffee_ready.irq(trigger=machine.Pin.IRQ_FALLING, handler=button_callback)
+    def button_callback(self, p):
+        '''
+        This is the callback called when the button is pressed
+        '''
+        if not self.backing_off:
+            self.backing_off = True
+            self.do_action = True
+            self.timer.init(
+                    period=self.backoff_time_ms,
+                    mode=Timer.ONE_SHOT,
+                    callback=self.de_backoff
+                    )
+
+    def de_backoff(self, t):
+        self.backing_off = False
+
+    def check_action(self, callback, *args, **kwargs):
+        '''
+        This will call the user provided callback function when the button has been pressed
+        '''
+        if self.do_action:
+            callback(*args, **kwargs)
+            self.do_action = False

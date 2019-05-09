@@ -14,7 +14,7 @@ https://github.com/micropython/micropython/issues/3650
 
 make sure not to make api call while the real-time api is being used
 '''
-import gc
+import machine
 import urequests
 import time
 import json
@@ -25,7 +25,8 @@ from uslackclient import SlackClient
 
 from wifi_connect import WifiState, WifiConnection
 from sensors import read_sensors
-from button import button_action
+from button import DebouncedButton
+from wdt import WatchDogTimer
 
 # READ the settings
 with open('config.json', 'r') as f:
@@ -43,6 +44,8 @@ dm_channels_list = None
 RTM_READ_DELAY = 2 # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "hello"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+WDT_PERIOD = 60000  # ms; 1 minute watchdog timer
+BUTTON_DEBOUNCE_PERIOD = 1000  # ms
 
 def help():
     global COMMANDS
@@ -123,10 +126,12 @@ def handle_command(command, channel):
             response = params['action']()
 
     # Sends the response back to the channel
-    slack_client.rtm_send_message(channel, response, )
+    slack_client.rtm_send_message(channel, response)
 
 if __name__ == '__main__':
 
+    the_button = DebouncedButton(22, backoff_time_ms=BUTTON_DEBOUNCE_PERIOD, timer_id=0)
+    watchdog = WatchDogTimer(WDT_PERIOD, timer_id=1)
     slack_client = SlackClient(config['slack']['bot_token'])
 
     while True:
@@ -138,7 +143,6 @@ if __name__ == '__main__':
 
         if dm_channels_list is None:
             dm_channels_list = get_direct_message_channels(slack_client)
-
 
         # now try to connect to Slack API
         if slack_client.rtm_connect(with_team_state=False):
@@ -154,8 +158,14 @@ if __name__ == '__main__':
                 if command:
                     handle_command(command, channel)
 
-                button_action(slack_client.rtm_send_message, config['button']['channel'], config['button']['message'])
-                time.sleep(RTM_READ_DELAY)
+                # check if button action is needed
+                the_button.check_action(
+                        slack_client.rtm_send_message,
+                        config['button']['channel'],
+                        config['button']['message']
+                        )
+                watchdog.reset()  # feed the watch dog
+                time.sleep(RTM_READ_DELAY)  # wait a little
         else:
             print("Connection failed. Exception traceback printed above.")
 

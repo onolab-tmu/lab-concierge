@@ -1,6 +1,6 @@
 # At some point implement useful commands
 
-FIRMWARE_IMAGE=firmware/esp32-20180405-v1.9.3-520-gb9c78425.bin
+FIRMWARE_IMAGE=firmware/esp32-20190125-v1.10.bin
 PORT?=${AMPY_PORT}
 
 .PHONY: uslackclient
