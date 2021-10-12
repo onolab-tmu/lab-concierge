@@ -3,5 +3,4 @@
     "SSID" : "my-ssid",
     "pass" : "super-password"
   },
-  "slack_hook_url" : "https://hooks.slack.com/services/<long_hex_number>"
 }
